@@ -34,9 +34,16 @@
 			<h2 class="{{ include.type }}-subheading">{{ page.subtitle }}</h2>
 			{% endif %}
 		  {% endif %}
-		  
+
 		  {% if include.type == "post" %}
-		  <span class="post-meta">Posted on {{ page.date | date: "%B %-d, %Y" }}</span>
+		  <span class="post-meta">Posted onn {{ page.date | date: "%B %-d, %Y" }}</span>
+
+          <ul class="tags">
+              {% for tag in page.tags %}
+                <li><a href="/tags#{{ tag }}" class="tag">{{ tag }}</a></li>
+              {% endfor %}
+          </ul>
+          {{ page.tags }}
 		  {% endif %}
         </div>
       </div>
@@ -59,9 +66,15 @@
 			<h2 class="{{ include.type }}-subheading">{{ page.subtitle }}</h2>
 			{% endif %}
 		  {% endif %}
-		  
+
 		  {% if include.type == "post" %}
 		  <span class="post-meta">Posted on {{ page.date | date: "%B %-d, %Y" }}</span>
+
+          <ul class="tags">
+              {% for tag in page.tags %}
+                <li><a href="/tags#{{ tag }}" class="tag">{{ tag }}</a></li>
+              {% endfor %}
+          </ul>
 		  {% endif %}
         </div>
       </div>

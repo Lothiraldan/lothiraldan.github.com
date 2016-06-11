@@ -172,14 +172,14 @@ img {
     width: 100px;
     margin-top: -50px;
   }
-  
+
   .navbar-custom .avatar-container  .avatar-img-border {
     width: 100%;
     box-shadow: 1px 1px 2px rgba(0, 0, 0, .8);
     -webkit-box-shadow: 1px 1px 2px rgba(0, 0, 0, .8);
     -moz-box-shadow: 1px 1px 2px rgba(0, 0, 0, .8);
   }
-  
+
   .navbar-custom .avatar-container  .avatar-img {
     width: 100%;
   }
@@ -217,7 +217,7 @@ img {
 @media only screen and (min-width: 768px) {
   .navbar-custom .nav .navlinks-container {
     text-align: center;
-  }  
+  }
   .navbar-custom .nav .navlinks-container:hover {
     background: #eee;
   }
@@ -273,7 +273,7 @@ footer .theme-by {
     font-size: 16px;
   }
 }
- 
+
 /* --- Post preview --- */
 
 .post-preview {
@@ -418,11 +418,11 @@ footer .theme-by {
   }
   .intro-header.big-img {
     margin-top: 91px;  /* Full navbar is small navbar + 20px padding on each side when expanded */
-  }	
+  }
   .intro-header.big-img .page-heading,
   .intro-header.big-img .post-heading  {
     padding: 150px 0;
-  }  
+  }
   .intro-header .page-heading h1 {
     font-size: 80px;
   }
@@ -459,9 +459,9 @@ footer .theme-by {
   }
   .header-section.has-img .big-img {
     margin-bottom: 0;
-  }  
-} 
-@media only screen and (max-width: 325px) { 
+  }
+}
+@media only screen and (max-width: 325px) {
   .intro-header.big-img {
     height: 200px;
   }
@@ -551,4 +551,66 @@ table tr td :first-child {
 table tr th :last-child,
 table tr td :last-child {
   margin-bottom: 0;
+}
+
+body {
+  font: 16px/1.5 'PT Sans', serif;
+  margin: 25px;
+}
+
+.tags {
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.tags li {
+  float: left;
+}
+
+.tag {
+  background: #eee;
+  border-radius: 3px 0 0 3px;
+  color: #999;
+  display: inline-block;
+  height: 26px;
+  line-height: 26px;
+  padding: 0 20px 0 23px;
+  position: relative;
+  margin: 0 10px 10px 0;
+  text-decoration: none;
+  -webkit-transition: color 0.2s;
+}
+
+.tag::before {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: inset 0 1px rgba(0, 0, 0, 0.25);
+  content: '';
+  height: 6px;
+  left: 10px;
+  position: absolute;
+  width: 6px;
+  top: 10px;
+}
+
+.tag::after {
+  background: #fff;
+  border-bottom: 13px solid transparent;
+  border-left: 10px solid #eee;
+  border-top: 13px solid transparent;
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.tag:hover {
+  background-color: crimson;
+  color: white;
+}
+
+.tag:hover::after {
+   border-left-color: crimson;
 }
