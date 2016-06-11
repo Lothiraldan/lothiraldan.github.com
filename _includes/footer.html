@@ -63,6 +63,16 @@
             </a>
           </li>
           {% endif %}
+      {% if site.author.speaker_deck and site.footer-links-active.speaker_deck %}
+          <li>
+            <a href="https://speakerdeck.com/{{ site.author.speaker_deck }}" title="SpeakerDeck">
+              <span class="fa-stack fa-lg">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa icon-speaker-deck fa-stack-1x fa-inverse"></i>
+              </span>
+            </a>
+          </li>
+      {% endif %}
 		  {% if site.footer-links-active.rss %}
 		  <li>
 			<a href="{{ '/feed.xml' | prepend: site.baseurl }}" title="RSS">
@@ -71,14 +81,14 @@
 				<i class="fa fa-rss fa-stack-1x fa-inverse"></i>
 			  </span>
 			</a>
-		  </li>		
-          {% endif %}		  
+		  </li>
+          {% endif %}
         </ul>
         <p class="copyright text-muted">
 		  {{ site.author.name }}
 		  &nbsp;&bull;&nbsp;
 		  {{ site.time | date: '%Y' }}
-		  
+
 		  {% if site.url-pretty %}
 		  &nbsp;&bull;&nbsp;
 		  <a href="{{ site.url }}">{{ site.url-pretty }}</a>

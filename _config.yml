@@ -44,6 +44,7 @@ author:
   twitter: lothiraldan
   linkedin: in/boris-feld-529a8030
   stackoverflow: 2996250/lothiraldan
+  speaker_deck: lothiraldan
 
 # Select which links to show in the footer
 footer-links-active:
@@ -54,6 +55,7 @@ footer-links-active:
   github: true
   linkedin: true
   stackoverflow: true
+  speaker_deck: true
 
 # How to display the link to the website in the footer
 # Remove this if you don't want a link in the footer
