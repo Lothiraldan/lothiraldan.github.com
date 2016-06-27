@@ -11,6 +11,14 @@ layout: base
 	      {{ content }}
 	    </article>
 
+      <h3>Tagged in:</h3>
+
+      <ul class="tags">
+          {% for tag in page.tags %}
+            <li><a href="/tags#{{ tag }}" class="tag">{{ tag }}</a></li>
+          {% endfor %}
+      </ul>
+
       <ul class="pager blog-pager">
         {% if page.previous.url %}
         <li class="previous">
