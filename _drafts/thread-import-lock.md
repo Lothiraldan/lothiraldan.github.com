@@ -1,16 +1,16 @@
 ---
 layout: post
-title: Froze your Python with str.encode and threads
+title: Freeze your Python with str.encode and threads
 bigimg: /img/frozen.jpg
 tag:
     - Python
 ---
 
-While working on a piece of code using thread, I struggled against a very nasty but fun bug that leads me to better understand some internals of python.
+While working on a piece of code using threads, I struggled against a very nasty but fun bug that lead me to better understand some internals of python.
 
 # The nasty bug
 
-I had a very nice piece of code that launch a thread, retrieve some json and store it for later use. The code was something like that (simplified for the example):
+I had a very nice piece of code that launched a thread, retrieved some json and stored it for later use. The code was something like that (simplified for the example):
 
 ```python
 from threading import Thread, Event
@@ -36,14 +36,14 @@ if timeout is not None:
     print("Retrieve json was not fast enough")
 ```
 
-These code worked fine, the error message was displayed only when the network latency was too high:
+It worked fine, the error message was displayed when the network latency was too high:
 
 ```bash
 $> python2 app.py
 Data retrieval done!
 ```
 
-It worked correctly until I tried to convert the dict keys and values from unicode to latin-1 strings:
+Then I tried to convert the dict keys and values from unicode to latin-1 strings:
 
 ```python
 class MyThread(Thread):
@@ -58,9 +58,9 @@ class MyThread(Thread):
             pass
 ```
 
-I'm pretty sure you already made this type of transformation when receiving JSON, don't you?
+I'm pretty sure you've once made this type of transformation when receiving JSON, haven't you?
 
-After adding this code, the error message was always displayed, no matter what timeout value I set, 5 seconds or 1 hour. Moreover, the `Data retrieval done!` message was always printed just after the error message:
+After adding this code, the error message was always displayed, no matter what timeout value I was setting, 5 seconds or 1 hour. To add to the strangeness, the `Data retrieval done!` message was always printed right after the error message:
 
 ```bash
 $> python2 app.py
@@ -75,7 +75,7 @@ $> python3 app.py
 Data retrieval done!
 ```
 
-There was something very strange behind this, so I decided to dig into the rabbit hole.
+There was something very strange going on, so I decided to go down the rabbit hole.
 
 # The isolation
 
@@ -100,7 +100,7 @@ thread.start()
 event.wait(10)
 ```
 
-If you try to launch this script with python 3, you should see:
+If you launch this script with python 3, you'll see:
 
 ```bash
 $> python3 str_encode_thread.py
@@ -109,7 +109,7 @@ $> python3 str_encode_thread.py
 1467046041.643483 Event set
 ```
 
-And with python 2, you should see:
+And with python 2, you'll see:
 
 ```bash
 $> python2 str_encode_thread.py
@@ -118,13 +118,13 @@ $> python2 str_encode_thread.py
 (1467046099.495961, 'Event set')
 ```
 
-So far, everything works fine. The fun comes when we try to import this script, for example if the script file is named `str_encode_thread`:
+So far, so good. The fun comes when we try to import this script, let's name the script file `str_encode_thread`:
 
 ```python
 import str_encode_thread
 ```
 
-Now if you launch this other script with python 3, everything should still be normal:
+Now if you launch this other script with python 3, everything will still be normal:
 
 ```bash
 $> time python3 test.py
@@ -134,7 +134,7 @@ $> time python3 test.py
 python3 test.py  0,05s user 0,01s system 84% cpu 0,081 total
 ```
 
-But with python 2, here comes our nasty friend:
+While with python 2, our nasty friend shows up:
 
 ```bash
 $> time python2 test.py
@@ -144,13 +144,13 @@ $> time python2 test.py
 python2 test.py  0,03s user 0,03s system 0% cpu 10,109 total
 ```
 
-If you look closely the `After encode` message, you can see that it was printed 10 seconds after the `Before encode` message, indicating that the thread was somehow froze.
+If you look closely the `After encode` message, you can see that it was printed 10 seconds after the `Before encode` message, indicating that the thread was somehow frozen.
 
-# Down in the rabbit hole
+# Down the rabbit hole
 
-Why a simple line like `value.encode('latin1', 'encode')` would block the thread? The GIL has nothing to do here, but could have been. My hunch was that `str.encode` does more that it appears on my back.
+Why whould a simple line like `value.encode('latin1', 'encode')` block the thread?
 
-I had before encounter some weird behavior with import in a thread environment, maybe `str.encode` was importing a module behind my back. Let's try to find out which one:
+As I had encountered some weird behavior with imports in a threaded environment in the past, my huntch was that maybe, under the hood, `str.encode` was importing a module. So I set out to find which one:
 
 ```python
 In [1]: import sys
@@ -166,9 +166,9 @@ In [5]: print("Imported modules", set(after_modules) - set(before_modules))
 ('Imported modules', set(['encodings.latin_1']))
 ```
 
-Gotcha! `str.encode(X)` try to import the module `encodings.X`, in fact it's not very documented, I couldn't find a clear explanation of this behavior anywhere.
+Gotcha! `str.encode(X)` tries to import the module `encodings.X`, which is not very documented. I couldn't find a clear explanation of this behavior anywhere.
 
-So the fix should be easy, import the module before in the main thread, and it should works, easy, right?
+So the fix should be easy, import the module in the main thread before using the function, and it should work, easy, right?
 
 ```python
 import time
@@ -204,11 +204,11 @@ We still have the problem! What is wrong?
 
 # We have to go deeper
 
-We know that `str.encode` try to import a module and that's likely what freeze our thread.
+We know that `str.encode` tries to import a module and that's likely what is freezing our thread.
 
-At this moment, I went to my favorite IRC channel (#python-fr) and asked for help and we finally found the explanation!
+At this point, I went to my favorite IRC channel (#python-fr) and asked for help and we finally found the explanation!
 
-When you do `import module` in your code, what does it do? If we trust `[the python documentation](https://docs.python.org/2/library/imp.html#examples), it does basically that:
+What does `import module` do? If we trust `[the python documentation](https://docs.python.org/2/library/imp.html#examples), it basically this:
 
 ```python
 import imp
@@ -234,9 +234,9 @@ def __import__(name, globals=None, locals=None, fromlist=None):
             fp.close()
 ```
 
-Nothing very fancy here, return the module if it have already been imported and put into `sys.modules` or try to locate the source file for the module, load it and return it.
+Nothing very fancy here: return the module from `sys.modules` if it has already been imported or try to locate the source file for the module, load it and return it.
 
-Nothing should blocks here either, but if we continue to read the `imp` module documentation, we can find a [very interesting function named `lock_help`](https://docs.python.org/2/library/imp.html#imp.lock_held) that says:
+Nothing should block here either, but if we continue to read the `imp` module documentation, we can find a [very interesting function named `lock_help`](https://docs.python.org/2/library/imp.html#imp.lock_held) that says:
 
     On platforms with threads, a thread executing an import holds an internal lock until the import is complete. This lock blocks other threads from doing an import until the original import completes, which in turn prevents other threads from seeing incomplete module objects constructed by the original thread while in the process of completing its import (and the imports, if any, triggered by that).
 
@@ -275,11 +275,11 @@ $> python2 test.py
 (1467050592.567418, 'Event set')
 ```
 
-When we imported our module `str_encode_thread`, the import lock was acquired by the MainThread. When our custom thread tries to execute the `value.encode('latin-1')`, the stdlib tries to import the module `encoding.latin_1` which block as the import lock is already held by the MainThread. We then block the MainThread by doing `event.wait(10)` and both threads are blocked for 10 seconds, too bad... When the wait timeout, the `import str_encode_thread` ends, release the import lock which awake our custom thread that can continue.
+When we imported our module `str_encode_thread`, the import lock was acquired by the MainThread. When our custom thread tried to execute the `value.encode('latin-1')`, the stdlib tried to import the module `encoding.latin_1` which blocks as the import lock is already held by the MainThread. We then block the MainThread by doing `event.wait(10)` and both threads are blocked for 10 seconds, too bad... When the wait timeouts, the `import str_encode_thread` ends, releasing the import lock which awakes our custom thread that can continue.
 
-If we didn't set a maximum timeout for the event, we would have deadlock our python interpreter forever!
+If we hadn't set a maximum timeout for the event, we would have deadlocked our python interpreter forever!
 
-With threads, there is no magic solution. You may wonder what if you manually import a module without using the lock? It may "solve" the deadlocks but my also raise a new type of fun bugs.
+With threads, there is no magic solution. You may wonder what would happen if you manually imported a module without using the lock? It may "solve" the deadlocks but may also raise a new type of fun bugs.
 
 For example, when you do `time.strptime`, it tries to import the `_strptime` module in a non-safe manner, which may trigger some hard-to-debug issues, like [this boto issue](https://github.com/boto/boto/issues/1898) and [the corresponding python bug page](http://bugs.python.org/issue7980). This problem can be solved by doing `import _strptime` earlier in the main thread because the thread will not block due to the lock and not see an incomplete module.
 
