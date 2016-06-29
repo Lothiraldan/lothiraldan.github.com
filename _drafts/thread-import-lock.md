@@ -139,14 +139,12 @@ But with python 2, here comes our nasty friend:
 ```bash
 $> time python2 test.py
 (1467046276.826755, 'Before encode')
-(1467046286.830485, 'After encode')
+(1467046286.830485, 'After encode') # <- 10 seconds (╯°□°）╯︵ ┻━┻
 (1467046286.830519, 'Event set')
 python2 test.py  0,03s user 0,03s system 0% cpu 10,109 total
 ```
 
-## Disclaimer
-
-There is perfectly valid reasons to launch a thread during an import, not very common but still valid, like launching a background thread in an import hook to process some files or running some code before Python full initialization in a [`sitecustomize` module](https://docs.python.org/3/library/site.html?highlight=sitecustomize).
+If you look closely the `After encode` message, you can see that it was printed 10 seconds after the `Before encode` message, indicating that the thread was somehow froze.
 
 # Down in the rabbit hole
 
@@ -208,7 +206,7 @@ We still have the problem! What is wrong?
 
 We know that `str.encode` try to import a module and that's likely what freeze our thread.
 
-At this moment, I went to my favorite IRC channel and asked for help and we finally found the explanation!
+At this moment, I went to my favorite IRC channel (#python-fr) and asked for help and we finally found the explanation!
 
 When you do `import module` in your code, what does it do? If we trust `[the python documentation](https://docs.python.org/2/library/imp.html#examples), it does basically that:
 
