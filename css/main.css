@@ -596,6 +596,6 @@ body {
 /* --- Fix offset for tag page with the navbar --- */
 
 h2[id] {
-  padding-top: 95px;
-  margin-top: -95px;
+  padding-top: 55px;
+  margin-top: -55px;
 }
