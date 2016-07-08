@@ -6,7 +6,7 @@ tag:
     - Python
 ---
 
-While working on a piece of code using threads, I struggled against a very nasty but fun bug that lead me to understand some internals of Python better.
+While working on a the [sqreen.io Python agent](https://www.sqreen.io/), I struggled against a very nasty but fun bug that lead me to understand some internals of Python better.
 
 # The nasty bug
 
