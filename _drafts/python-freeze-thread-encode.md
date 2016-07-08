@@ -6,7 +6,7 @@ tag:
     - Python
 ---
 
-While working on a piece of code using threads, I struggled against a very nasty but fun bug that lead me to better understand some internals of python.
+While working on a piece of code using threads, I struggled against a very nasty but fun bug that lead me to understand some internals of Python better.
 
 # The nasty bug
 
@@ -100,7 +100,7 @@ thread.start()
 event.wait(10)
 ```
 
-If you launch this script with python 3, you'll see:
+If you launch this script with Python 3, you'll see:
 
 ```bash
 $> python3 str_encode_thread.py
@@ -150,7 +150,7 @@ If you look closely the `After encode` message, you can see that it was printed 
 
 Why whould a simple line like `value.encode('latin1', 'encode')` block the thread?
 
-As I had encountered some weird behavior with imports in a threaded environment in the past, my huntch was that maybe, under the hood, `str.encode` was importing a module. So I set out to find which one:
+As I had encountered some weird behavior with imports in a threaded environment in the past, my hunch was that maybe, under the hood, `str.encode` was importing a module. So I set out to find which one:
 
 ```python
 In [1]: import sys
@@ -206,9 +206,9 @@ We still have the problem! What is wrong?
 
 We know that `str.encode` tries to import a module and that's likely what is freezing our thread.
 
-At this point, I went to my favorite IRC channel (#python-fr) and asked for help and we finally found the explanation!
+At this point, I went to my favorite IRC channel (#python-fr) and asked for help, and we finally found the explanation!
 
-What does `import module` do? If we trust `[the python documentation](https://docs.python.org/2/library/imp.html#examples), it basically this:
+What does `import module` do? If we trust `[the python documentation](https://docs.python.org/2/library/imp.html#examples), it basically does this:
 
 ```python
 import imp
@@ -244,7 +244,7 @@ We are reaching the explanation!
 
 # Locks and thread, a hate-love relation
 
-When googling `python import lock`, we quickly can find this section about [Importing in threaded code](https://docs.python.org/2/library/threading.html#importing-in-threaded-code) that says that it's a very bad idea and you can encounter deadlocks.
+When googling `python import lock`, we quickly can find this section about [Importing in threaded code](https://docs.python.org/2/library/threading.html#importing-in-threaded-code) that says that it's a terrible idea, and you can encounter deadlocks.
 
 Let's sum up what we found:
 
@@ -275,7 +275,7 @@ $> python2 test.py
 (1467050592.567418, 'Event set')
 ```
 
-When we imported our module `str_encode_thread`, the import lock was acquired by the MainThread. When our custom thread tried to execute the `value.encode('latin-1')`, the stdlib tried to import the module `encoding.latin_1` which blocks as the import lock is already held by the MainThread. We then block the MainThread by doing `event.wait(10)` and both threads are blocked for 10 seconds, too bad... When the wait timeouts, the `import str_encode_thread` ends, releasing the import lock which awakes our custom thread that can continue.
+When we imported our module `str_encode_thread`, the import lock was acquired by the MainThread. When our custom thread tried to execute the `value.encode('latin-1')`, the stdlib tried to import the module `encoding.latin_1` which blocks as the import lock is already held by the MainThread. We then block the MainThread by doing `event.wait(10)` and both threads are blocked for 10 seconds, too bad... When the wait timeouts, the `import str_encode_thread` ends, releasing the import lock which awakens our custom thread that can continue.
 
 If we hadn't set a maximum timeout for the event, we would have deadlocked our python interpreter forever!
 
@@ -285,10 +285,10 @@ For example, when you do `time.strptime`, it tries to import the `_strptime` mod
 
 # Python 3 is the future
 
-But why did it works in Python 3. In addition of breaking all your imports name and forcing you to put `.encode` and `.decode` everywhere in your code (which is a good thing!), the import lock was refactored in python 3 and [the global import lock is now per module](https://mail.python.org/pipermail/python-dev/2013-August/127902.html). You're now less likely to trigger the problem.
+But why did it works in Python 3? In addition to breaking all your imports name and forcing you to put `.encode` and `.decode` everywhere in your code (which is a good thing!), the import lock was refactored in Python 3 and [the global import lock is now per module](https://mail.python.org/pipermail/python-dev/2013-August/127902.html). You're now less likely to trigger the problem.
 
-# We should all use python 3
+# We should all use Python 3
 
-It was a very nasty bug but it was also very fun to dig into the less known mechanisms of Python.
+It was a very nasty bug, but it was also very fun to dig into the less known mechanisms of Python.
 
-**TLDR**: In python 2, there is a single reentrant lock that will block your threads if they try to do an import while the lock is held by another thread. In python 3, the import lock is now per module.
+**TLDR**: In Python 2, there is a single reentrant lock that will block your threads if they try to do an import while the lock is held by another thread. In Python 3, the import lock is now per module.
