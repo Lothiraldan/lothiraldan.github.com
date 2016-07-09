@@ -68,7 +68,7 @@ Retrieve json was not fast enough
 Data retrieval done!
 ```
 
-I tried with python 3 and saw the correct behavior:
+I tried with Python 3 and saw the correct behavior:
 
 ```bash
 $> python3 app.py
@@ -79,7 +79,7 @@ There was something very strange going on, so I decided to go down the rabbit ho
 
 # The isolation
 
-I tried to isolate the problem and came to this minimal reproducing script:
+I tried to isolate the problem and came to this minimal reproducing script, let's name this file `str_encode_thread.py`:
 
 ```python
 import time
@@ -109,7 +109,7 @@ $> python3 str_encode_thread.py
 1467046041.643483 Event set
 ```
 
-And with python 2, you'll see:
+And with Python 2, you'll see:
 
 ```bash
 $> python2 str_encode_thread.py
@@ -118,39 +118,91 @@ $> python2 str_encode_thread.py
 (1467046099.495961, 'Event set')
 ```
 
-So far, so good. The fun comes when we try to import this script, let's name the script file `str_encode_thread`:
-
-```python
-import str_encode_thread
-```
-
-Now if you launch this other script with python 3, everything will still be normal:
+So far, so good. The fun comes when we try to import this script. If you import the script with Python 3, everything will still be normal:
 
 ```bash
-$> time python3 test.py
+$> time python3 -c "import str_encode_thread"
 1467046239.921475 Before encode
 1467046239.921578 After encode
 1467046239.921602 Event set
-python3 test.py  0,05s user 0,01s system 84% cpu 0,081 total
+python3 -c "import str_encode_thread"  0,05s user 0,01s system 84% cpu 0,081 total
 ```
 
 While with python 2, our nasty friend shows up:
 
 ```bash
-$> time python2 test.py
+$> time python2 -c "import str_encode_thread"
 (1467046276.826755, 'Before encode')
 (1467046286.830485, 'After encode') # <- 10 seconds (╯°□°）╯︵ ┻━┻
 (1467046286.830519, 'Event set')
-python2 test.py  0,03s user 0,03s system 0% cpu 10,109 total
+python2 -c "import str_encode_thread"  0,03s user 0,03s system 0% cpu 10,109 total
 ```
 
-If you look closely the `After encode` message, you can see that it was printed 10 seconds after the `Before encode` message, indicating that the thread was somehow frozen.
+If you look closely the `After encode` message, you can see that it was printed 10 se[conds after the `Before encode` message, indicating that the thread was somehow frozen.
 
 # Down the rabbit hole
 
 Why whould a simple line like `value.encode('latin1', 'encode')` block the thread?
 
-As I had encountered some weird behavior with imports in a threaded environment in the past, my hunch was that maybe, under the hood, `str.encode` was importing a module. So I set out to find which one:
+Fortunately, there is a [very nice package named faulthandler](https://pypi.python.org/pypi/faulthandler/2.4) which is very helpful in these situations. It can display a traceback on unix signals, on a user signal or on python fault. It's included in the standard library since python 3.3 and is installable via pip for other Python versions.
+
+In our case, we will use [`dump_traceback_later`](http://faulthandler.readthedocs.io/#dumping-the-tracebacks-after-a-timeout) to have an idea where the tread is blockin.
+
+The new script with faulthandler is not much more different (don't forget to `pip install faulthandler`):
+
+```python
+import time
+import threading
+import faulthandler
+
+
+faulthandler.dump_traceback_later(5)
+
+
+def to_latin_1(event, value):
+    print(time.time(), "Before encode")
+    value.encode('latin-1')
+    print(time.time(), "After encode")
+    event.set()
+    print(time.time(), "Event set")
+
+event = threading.Event()
+thread = threading.Thread(target=to_latin_1, args=(event, u'42'))
+thread.start()
+
+event.wait(10)
+```
+
+Let's run our new script again:
+
+```bash
+time python2 -c "import str_encode_thread"
+(1468083195.13011, 'Before encode')
+Timeout (0:00:05)!
+Thread 0x0000700000401000 (most recent call first):
+  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/encodings/__init__.py", line 100 in search_function
+  File "str_encode_thread.py", line 11 in to_latin_1
+  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 754 in run
+  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 801 in __bootstrap_inner
+  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 774 in __bootstrap
+
+Current thread 0x00007fff71258000 (most recent call first):
+  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 359 in wait
+  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 614 in wait
+  File "str_encode_thread.py", line 20 in <module>
+  File "<string>", line 1 in <module>
+(1468083205.133041, 'After encode')
+(1468083205.133106, 'Event set')
+python2 -c "import str_encode_thread"  0,03s user 0,02s system 0% cpu 10,043 total
+```
+
+What can we see with the traceback?
+
+The main thread `0x00007fff71258000`, is blocked on line 20 of our module which is `event.wait(10)`, it's perfeclty normal.
+
+The other thread `0x0000700000401000`, is running the line 11 of our module `value.encode('latin-1')` which called `search_function` of the builtin module `encoding`. What does this function does and why does it blocks?
+
+The [source code](https://hg.python.org/cpython/file/v2.7.12rc1/Lib/encodings/__init__.py#l99) tells us that it tries to import a module which begins with `encodings.`. Let's try to find which one:
 
 ```python
 In [1]: import sys
@@ -193,11 +245,11 @@ event.wait(10)
 Let's try again in python2:
 
 ```bash
-$> time python2 test.py
+$> time python2 -c "import str_encode_thread"
 (1467049098.995541, 'Before encode')
 (1467049109.000293, 'After encode')
 (1467049109.000324, 'Event set')
-python2 test.py  0,03s user 0,02s system 0% cpu 10,054 total
+python2 -c "import str_encode_thread"  0,03s user 0,02s system 0% cpu 10,054 total
 ```
 
 We still have the problem! What is wrong?
@@ -208,7 +260,7 @@ We know that `str.encode` tries to import a module and that's likely what is fre
 
 At this point, I went to my favorite IRC channel (#python-fr) and asked for help, and we finally found the explanation!
 
-What does `import module` do? If we trust `[the python documentation](https://docs.python.org/2/library/imp.html#examples), it basically does this:
+What does `import module` do? If we trust `[the Python documentation](https://docs.python.org/2/library/imp.html#examples), it basically does this:
 
 ```python
 import imp
@@ -269,7 +321,7 @@ event.wait(10)
 ```
 
 ```bash
-$> python2 test.py
+$> python2 -c "import str_encode_thread"
 (1467050582.565935, 'Before encode', 'Thread-1', True)
 (1467050592.567373, 'After encode')
 (1467050592.567418, 'Event set')
@@ -277,11 +329,11 @@ $> python2 test.py
 
 When we imported our module `str_encode_thread`, the import lock was acquired by the MainThread. When our custom thread tried to execute the `value.encode('latin-1')`, the stdlib tried to import the module `encoding.latin_1` which blocks as the import lock is already held by the MainThread. We then block the MainThread by doing `event.wait(10)` and both threads are blocked for 10 seconds, too bad... When the wait timeouts, the `import str_encode_thread` ends, releasing the import lock which awakens our custom thread that can continue.
 
-If we hadn't set a maximum timeout for the event, we would have deadlocked our python interpreter forever!
+If we hadn't set a maximum timeout for the event, we would have deadlocked our Python interpreter forever!
 
 With threads, there is no magic solution. You may wonder what would happen if you manually imported a module without using the lock? It may "solve" the deadlocks but may also raise a new type of fun bugs.
 
-For example, when you do `time.strptime`, it tries to import the `_strptime` module in a non-safe manner, which may trigger some hard-to-debug issues, like [this boto issue](https://github.com/boto/boto/issues/1898) and [the corresponding python bug page](http://bugs.python.org/issue7980). This problem can be solved by doing `import _strptime` earlier in the main thread because the thread will not block due to the lock and not see an incomplete module.
+For example, when you do `time.strptime`, it tries to import the `_strptime` module in a non-safe manner, which may trigger some hard-to-debug issues, like [this boto issue](https://github.com/boto/boto/issues/1898) and [the corresponding Python bug page](http://bugs.python.org/issue7980). This problem can be solved by doing `import _strptime` earlier in the main thread because the thread will not block due to the lock and not see an incomplete module.
 
 # Python 3 is the future
 
