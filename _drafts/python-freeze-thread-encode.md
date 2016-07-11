@@ -10,7 +10,7 @@ While working on a the [sqreen.io Python agent](https://www.sqreen.io/), I strug
 
 # The nasty bug
 
-I had a very nice piece of code that launched a thread, retrieved some json and stored it for later use. The code was something like that (simplified for the example):
+I had a very nice piece of code that launched a thread, retrieved some JSON and stored it for later use. The code was something like that (simplified for the example):
 
 ```python
 from threading import Thread, Event
@@ -33,10 +33,10 @@ thread.start()
 timeout = thread.event.wait(5)
 
 if timeout is not None:
-    print("Retrieve json was not fast enough")
+    print("JSON retrieval was too slow")
 ```
 
-It worked fine, the error message was displayed when the network latency was too high:
+It was working, the error message was displayed when network latency was too high:
 
 ```bash
 $> python2 app.py
@@ -50,7 +50,7 @@ class MyThread(Thread):
 
     def run(self):
         data = self.retrieve_json()
-        # Convert unicode strings into latin1 string because WSGI
+        # Convert unicode strings into latin1 strings because of WSGI
         self.data = {key.encode('latin1'): value.encode('latin1') for (key, value) in data.keys()}
         self.event.set()
         print("Data retrieval done!")
@@ -64,7 +64,7 @@ After adding this code, the error message was always displayed, no matter what t
 
 ```bash
 $> python2 app.py
-Retrieve json was not fast enough
+JSON retrieval was too slow
 Data retrieval done!
 ```
 
@@ -146,7 +146,7 @@ Why whould a simple line like `value.encode('latin1', 'encode')` block the threa
 
 Fortunately, there is a [very nice package named faulthandler](https://pypi.python.org/pypi/faulthandler/2.4) which is very helpful in these situations. It can display a traceback on unix signals, on a user signal or on python fault. It's included in the standard library since python 3.3 and is installable via pip for other Python versions.
 
-In our case, we will use [`dump_traceback_later`](http://faulthandler.readthedocs.io/#dumping-the-tracebacks-after-a-timeout) to have an idea where the tread is blockin.
+In our case, we will use [`dump_traceback_later`](http://faulthandler.readthedocs.io/#dumping-the-tracebacks-after-a-timeout) to have an idea where the tread is blocking.
 
 The new script with faulthandler is not much more different (don't forget to `pip install faulthandler`):
 
@@ -200,7 +200,7 @@ What can we see with the traceback?
 
 The main thread `0x00007fff71258000`, is blocked on line 20 of our module which is `event.wait(10)`, it's perfeclty normal.
 
-The other thread `0x0000700000401000`, is running the line 11 of our module `value.encode('latin-1')` which called `search_function` of the builtin module `encoding`. What does this function does and why does it blocks?
+The other thread `0x0000700000401000`, is running the line 11 of our module `value.encode('latin-1')` and called the function `search_function` of the builtin module `encoding` which freeze our thread. What does this function does and why does it blocks?
 
 The [source code](https://hg.python.org/cpython/file/v2.7.12rc1/Lib/encodings/__init__.py#l99) tells us that it tries to import a module which begins with `encodings.`. Let's try to find which one:
 
@@ -218,9 +218,7 @@ In [5]: print("Imported modules", set(after_modules) - set(before_modules))
 ('Imported modules', set(['encodings.latin_1']))
 ```
 
-Gotcha! `str.encode(X)` tries to import the module `encodings.X`, which is not very documented. I couldn't find a clear explanation of this behavior anywhere.
-
-So the fix should be easy, import the module in the main thread before using the function, and it should work, easy, right?
+Gotcha! `str.encode(X)` tries to import the module `encodings.X`. So the fix should be easy, import the module in the main thread before using the function, and it should work, easy, right?
 
 ```python
 import time
@@ -242,7 +240,7 @@ thread.start()
 event.wait(10)
 ```
 
-Let's try again in python2:
+Let's try again with python2:
 
 ```bash
 $> time python2 -c "import str_encode_thread"
@@ -252,7 +250,7 @@ $> time python2 -c "import str_encode_thread"
 python2 -c "import str_encode_thread"  0,03s user 0,02s system 0% cpu 10,054 total
 ```
 
-We still have the problem! What is wrong?
+We still have the problem! What's wrong?
 
 # We have to go deeper
 
@@ -288,7 +286,7 @@ def __import__(name, globals=None, locals=None, fromlist=None):
 
 Nothing very fancy here: return the module from `sys.modules` if it has already been imported or try to locate the source file for the module, load it and return it.
 
-Nothing should block here either, but if we continue to read the `imp` module documentation, we can find a [very interesting function named `lock_help`](https://docs.python.org/2/library/imp.html#imp.lock_held) that says:
+Nothing should block here either, but if we continue to read the `imp` module documentation, we can find a [very interesting function named `lock_help`](https://docs.python.org/2/library/imp.html#imp.lock_held):
 
     On platforms with threads, a thread executing an import holds an internal lock until the import is complete. This lock blocks other threads from doing an import until the original import completes, which in turn prevents other threads from seeing incomplete module objects constructed by the original thread while in the process of completing its import (and the imports, if any, triggered by that).
 
@@ -327,7 +325,7 @@ $> python2 -c "import str_encode_thread"
 (1467050592.567418, 'Event set')
 ```
 
-When we imported our module `str_encode_thread`, the import lock was acquired by the MainThread. When our custom thread tried to execute the `value.encode('latin-1')`, the stdlib tried to import the module `encoding.latin_1` which blocks as the import lock is already held by the MainThread. We then block the MainThread by doing `event.wait(10)` and both threads are blocked for 10 seconds, too bad... When the wait timeouts, the `import str_encode_thread` ends, releasing the import lock which awakens our custom thread that can continue.
+When we imported our module `str_encode_thread`, the import lock was acquired by the MainThread. When our custom thread tried to execute the `value.encode('latin-1')`, the stdlib tried to import the `encoding.latin_1` module which blocks as the import lock is already held by the MainThread. We then block the MainThread by doing `event.wait(10)` and both threads are blocked for 10 seconds, too bad... When the wait timeouts, the `import str_encode_thread` ends, releasing the import lock which awakens our custom thread that can continue.
 
 If we hadn't set a maximum timeout for the event, we would have deadlocked our Python interpreter forever!
 
