@@ -180,15 +180,15 @@ time python2 -c "import str_encode_thread"
 (1468083195.13011, 'Before encode')
 Timeout (0:00:05)!
 Thread 0x0000700000401000 (most recent call first):
-  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/encodings/__init__.py", line 100 in search_function
+  File "/usr/lib/python2.7/encodings/__init__.py", line 100 in search_function
   File "str_encode_thread.py", line 11 in to_latin_1
-  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 754 in run
-  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 801 in __bootstrap_inner
-  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 774 in __bootstrap
+  File "/usr/lib/python2.7/threading.py", line 754 in run
+  File "/usr/lib/python2.7/threading.py", line 801 in __bootstrap_inner
+  File "/usr/lib/python2.7/threading.pyy", line 774 in __bootstrap
 
 Current thread 0x00007fff71258000 (most recent call first):
-  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 359 in wait
-  File "/usr/local/Cellar/python/2.7.12rc1/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py", line 614 in wait
+  File "/usr/lib/python2.7/threading.py", line 359 in wait
+  File "/usr/lib/python2.7/threading.py", line 614 in wait
   File "str_encode_thread.py", line 20 in <module>
   File "<string>", line 1 in <module>
 (1468083205.133041, 'After encode')
