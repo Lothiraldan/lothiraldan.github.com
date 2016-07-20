@@ -51,7 +51,7 @@ class MyThread(Thread):
     def run(self):
         data = self.retrieve_json()
         # Convert unicode strings into latin1 strings because of WSGI
-        self.data = {key.encode('latin1'): value.encode('latin1') for (key, value) in data.keys()}
+        self.data = {key.encode('latin1'): value.encode('latin1') for (key, value) in data.items()}
         self.event.set()
         print("Data retrieval done!")
         while True:
