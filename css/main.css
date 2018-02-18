@@ -599,3 +599,8 @@ h2[id] {
   padding-top: 55px;
   margin-top: -55px;
 }
+
+pre code {
+  overflow: auto;
+  white-space: inherit;
+}
